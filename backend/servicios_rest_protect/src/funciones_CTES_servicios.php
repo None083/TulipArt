@@ -5,13 +5,14 @@ use Firebase\JWT\Key;
 
 require 'Firebase/autoload.php';
 
-define("SERVIDOR_BD", "localhost");
-/*define("USUARIO_BD", "jose");
-define("CLAVE_BD", "josefa");*/
-define("USUARIO_BD","root");
-define("CLAVE_BD","");
-define("NOMBRE_BD", "tulipart");
-define("PASSWORD_API", "PASSWORD_DE_MI_APLICACION");
+
+// Configuración para Railway y local
+define("SERVIDOR_BD", getenv('MYSQLHOST') ?: 'localhost');
+define("USUARIO_BD", getenv('MYSQLUSER') ?: 'root');
+define("CLAVE_BD", getenv('MYSQLPASSWORD') ?: '');
+define("NOMBRE_BD", getenv('MYSQLDATABASE') ?: 'tulipart');
+define("PUERTO_BD", getenv('MYSQLPORT') ?: 3306);
+define("PASSWORD_API", getenv('PASSWORD_API') ?: "PASSWORD_DE_MI_APLICACION");
 
 
 

@@ -41,7 +41,9 @@ $(function () {
     // Inicializar el plugin jQuery File Upload
     $('#upload').fileupload({
         // URL a la que se enviarán las imágenes
-        url: 'http://localhost/Proyectos/TulipArt/backend/servicios_rest_protect/subir_imagen_temporal',
+        // Usa la configuración global para la API
+        // Requiere que config.js esté incluido antes
+        url: (typeof appConfig !== 'undefined' ? appConfig.apiBaseUrl : '/backend/servicios_rest_protect') + '/subir_imagen_temporal',
         dataType: 'json',
         // Establecer la zona de drop
         dropZone: $('#drop'),

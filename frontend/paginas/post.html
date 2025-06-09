@@ -16,6 +16,7 @@
     <script src="../jq/jquery.animate-colors-min.js"></script>
     <script src="../jq/jquery-ui-1.14.1.custom/jquery-ui.min.js"></script>
     <script src="../jq/script-efectos.js"></script>
+    <script src="../js/config.js"></script>
     <script src="../js/funciones_consumir_servicios.js"></script>
     <script src="../js/funciones_obras_relacionadas.js"></script>
     <script src="../js/funciones_comentarios.js"></script>
@@ -61,16 +62,16 @@
                     <span>Profile</span>
                 </a>
                 <div id="contenedor-alerts">
-					<a href="#" id="alerts-header" class="no-logged">
-						<img id="icon-alerts" src="../imagenes/icons/icons-blanco/bell.svg" alt="Icon alerts">
+                    <a href="#" id="alerts-header" class="no-logged">
+                        <img id="icon-alerts" src="../imagenes/icons/icons-blanco/bell.svg" alt="Icon alerts">
                         <span id="num-alerts">0</span>
-						<span id="text">Alerts</span>
-					</a>
-					<nav id="caja-alertas" aria-label="caja-alertas">
-						<div class="pico-bocadillo"></div>
-						<div id="content-alerts"><span>hola</span></div>
-					</nav>
-				</div>
+                        <span id="text">Alerts</span>
+                    </a>
+                    <nav id="caja-alertas" aria-label="caja-alertas">
+                        <div class="pico-bocadillo"></div>
+                        <div id="content-alerts"><span>hola</span></div>
+                    </nav>
+                </div>
                 <a href="#" id="messages-header">
                     <img src="../imagenes/icons/icons-blanco/message-square.svg" alt="Icon messages">
                     <span>Messages</span>
@@ -230,9 +231,9 @@
     <script>
         $(document).ready(function () {
             if (localStorage.token) {
-				const idUsu = localStorage.getItem('idUsu');
-				cargar_alertas(idUsu, "../imagenes/", "../../");
-			}
+                const idUsu = localStorage.getItem('idUsu');
+                cargar_alertas(idUsu, "../imagenes/", "../../");
+            }
             // Obtener el ID de la obra de la URL
             const params = new URLSearchParams(window.location.search);
             const idObra = params.get('id');
