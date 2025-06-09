@@ -1,5 +1,10 @@
 <?php
 // Obtener variables de entorno de Railway
+echo "MYSQLHOST: " . getenv('MYSQLHOST') . "\n";
+echo "MYSQLUSER: " . getenv('MYSQLUSER') . "\n";
+echo "MYSQLPASSWORD: " . getenv('MYSQLPASSWORD') . "\n";
+echo "MYSQLDATABASE: " . getenv('MYSQLDATABASE') . "\n";
+echo "MYSQLPORT: " . getenv('MYSQLPORT') . "\n";
 $host = getenv('MYSQLHOST');
 $user = getenv('MYSQLUSER');
 $pass = getenv('MYSQLPASSWORD');
