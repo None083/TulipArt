@@ -1,4 +1,9 @@
 <?php
+
+// Ocultar avisos deprecados y warnings en producción
+error_reporting(E_ALL & ~E_DEPRECATED & ~E_WARNING & ~E_NOTICE);
+ini_set('display_errors', 0);
+
 // Crear estructura de directorios si no existe
 $directorios = [
     '../images',
