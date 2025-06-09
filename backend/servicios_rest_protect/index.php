@@ -160,7 +160,7 @@ $app->post('/subir_imagen_temporal', function ($request) {
     }
 
     // Construir la URL absoluta correcta para la imagen
-    $urlBase = "http://localhost/Proyectos/TulipArt/backeimages/temporales/";
+    $urlBase = "https://tulipart-production.up.railway.app/images/temporales/";
     $urlTemporal = $urlBase . $nombreArchivo;
 
     // Devolver información foto temporal
