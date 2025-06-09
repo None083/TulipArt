@@ -1,1 +1,1 @@
-web: php -S 0.0.0.0:8080 -t backend/servicios_rest_protect
+web: php -S 0.0.0.0:8080 -t frontend
