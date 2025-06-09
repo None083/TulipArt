@@ -5,39 +5,52 @@ function contar_total_obras($conexion, $filtro = "", $valor = "") {
     $sql = "SELECT COUNT(DISTINCT o.idObra) FROM obras o";
     $parametros = [];
     
-    // Aplicar filtros según los parámetros recibidos
+    // Aplicar JOINs según el filtro (separamos los JOINs de las condiciones WHERE para mayor claridad)
     if ($filtro && $valor) {
         switch ($filtro) {
             case "buscar":
                 // Búsqueda por título o por etiquetas
                 $sql .= " LEFT JOIN etiquetasobras eo ON o.idObra = eo.idObra 
-                           LEFT JOIN etiquetas e ON eo.idEtiqueta = e.idEtiqueta 
-                           WHERE o.nombreObra LIKE ? OR e.nombre LIKE ?";
-                $parametros[] = "%$valor%";
-                $parametros[] = "%$valor%";
+                           LEFT JOIN etiquetas e ON eo.idEtiqueta = e.idEtiqueta";
                 break;
             case "etiqueta":
                 // Filtrar por etiqueta específica
                 $sql .= " INNER JOIN etiquetasobras eo ON o.idObra = eo.idObra 
-                           INNER JOIN etiquetas e ON eo.idEtiqueta = e.idEtiqueta 
-                           WHERE e.nombre = ?";
+                           INNER JOIN etiquetas e ON eo.idEtiqueta = e.idEtiqueta";
+                break;
+            case "siguiendo":
+                // Obras de usuarios que sigue el usuario logueado
+                $sql .= " INNER JOIN siguen s ON o.idUsu = s.idSeguido";
+                break;
+            case "for_you":
+                // Obras con etiquetas similares a las obras que ha dado like el usuario
+                $sql .= " INNER JOIN etiquetasobras eo ON o.idObra = eo.idObra";
+                break;
+        }
+    }
+    
+    // Aplicar condiciones WHERE
+    if ($filtro && $valor) {
+        switch ($filtro) {
+            case "buscar":
+                $sql .= " WHERE o.nombreObra LIKE ? OR e.nombre LIKE ?";
+                $parametros[] = "%$valor%";
+                $parametros[] = "%$valor%";
+                break;
+            case "etiqueta":
+                $sql .= " WHERE e.nombre = ?";
                 $parametros[] = $valor;
                 break;
             case "usuario":
-                // Filtrar por usuario específico
                 $sql .= " WHERE o.idUsu = ?";
                 $parametros[] = $valor;
                 break;
             case "siguiendo":
-                // Obras de usuarios que sigue el usuario logueado
-                $sql .= " INNER JOIN siguen s ON o.idUsu = s.idSeguido 
-                           WHERE s.idSeguidor = ?";
+                $sql .= " WHERE s.idSeguidor = ?";
                 $parametros[] = $valor;
                 break;
             case "for_you":
-                // Obras con etiquetas similares a las obras que ha dado like el usuario
-                $sql .= " INNER JOIN etiquetasobras eo ON o.idObra = eo.idObra
-                          WHERE eo.idEtiqueta IN (
+                $sql .= " WHERE eo.idEtiqueta IN (
                               SELECT DISTINCT e.idEtiqueta FROM etiquetas e
                               INNER JOIN etiquetasobras eo ON e.idEtiqueta = eo.idEtiqueta
                               INNER JOIN obras o ON eo.idObra = o.idObra
@@ -75,46 +88,66 @@ function obtener_obras_filtradas($filtro = "", $valor = "", $ordenar = "", $pagi
     $offset = ($pagina - 1) * $limite;
     
     // Construir la consulta SQL base
-    $sql = "SELECT DISTINCT o.* FROM obras o";
+    // Para trending, incluimos num_likes en el SELECT para poder ordenar por este campo
+    if ($ordenar === "trending") {
+        $sql = "SELECT DISTINCT o.*, COALESCE(l.num_likes, 0) as num_likes FROM obras o";
+    } else {
+        $sql = "SELECT DISTINCT o.* FROM obras o";
+    }
     $parametros = [];
     
-    // Aplicar filtros según los parámetros recibidos
+    // Aplicar JOINs según el filtro
     if ($filtro && $valor) {
         switch ($filtro) {
             case "buscar":
-                // Búsqueda por título o por etiquetas
                 $sql .= " LEFT JOIN etiquetasobras eo ON o.idObra = eo.idObra 
-                           LEFT JOIN etiquetas e ON eo.idEtiqueta = e.idEtiqueta 
-                           WHERE o.nombreObra LIKE ? OR e.nombre LIKE ?";
+                          LEFT JOIN etiquetas e ON eo.idEtiqueta = e.idEtiqueta";
+                break;
+            case "etiqueta":
+                $sql .= " INNER JOIN etiquetasobras eo ON o.idObra = eo.idObra 
+                          INNER JOIN etiquetas e ON eo.idEtiqueta = e.idEtiqueta";
+                break;
+            case "siguiendo":
+                $sql .= " INNER JOIN siguen s ON o.idUsu = s.idSeguido";
+                break;
+            case "for_you":
+                $sql .= " INNER JOIN etiquetasobras eo ON o.idObra = eo.idObra";
+                break;
+        }
+    }
+    
+    // Agregar el JOIN para trending antes del WHERE
+    if ($ordenar === "trending") {
+        $sql .= " LEFT JOIN (SELECT idObra, COUNT(*) as num_likes 
+                  FROM likes GROUP BY idObra) l ON o.idObra = l.idObra";
+    }
+    
+    // Aplicar WHERE según el filtro
+    if ($filtro && $valor) {
+        switch ($filtro) {
+            case "buscar":
+                $sql .= " WHERE o.nombreObra LIKE ? OR e.nombre LIKE ?";
                 $parametros[] = "%$valor%";
                 $parametros[] = "%$valor%";
                 break;
             case "etiqueta":
-                // Filtrar por etiqueta específica
-                $sql .= " INNER JOIN etiquetasobras eo ON o.idObra = eo.idObra 
-                           INNER JOIN etiquetas e ON eo.idEtiqueta = e.idEtiqueta 
-                           WHERE e.nombre = ?";
+                $sql .= " WHERE e.nombre = ?";
                 $parametros[] = $valor;
                 break;
             case "usuario":
-                // Filtrar por usuario específico
                 $sql .= " WHERE o.idUsu = ?";
                 $parametros[] = $valor;
                 break;
             case "siguiendo":
-                // Obras de usuarios que sigue el usuario logueado
-                $sql .= " INNER JOIN siguen s ON o.idUsu = s.idSeguido 
-                           WHERE s.idSeguidor = ?";
+                $sql .= " WHERE s.idSeguidor = ?";
                 $parametros[] = $valor;
                 break;
             case "for_you":
-                // Obras con etiquetas similares a las obras que ha dado like el usuario
-                $sql .= " INNER JOIN etiquetasobras eo ON o.idObra = eo.idObra
-                          WHERE eo.idEtiqueta IN (
+                $sql .= " WHERE eo.idEtiqueta IN (
                               SELECT DISTINCT e.idEtiqueta FROM etiquetas e
                               INNER JOIN etiquetasobras eo ON e.idEtiqueta = eo.idEtiqueta
-                              INNER JOIN obras o ON eo.idObra = o.idObra
-                              INNER JOIN likes l ON o.idObra = l.idObra
+                              INNER JOIN obras o2 ON eo.idObra = o2.idObra
+                              INNER JOIN likes l ON o2.idObra = l.idObra
                               WHERE l.idUsuLike = ?
                           ) AND o.idObra NOT IN (
                               SELECT idObra FROM likes WHERE idUsuLike = ?
@@ -132,16 +165,16 @@ function obtener_obras_filtradas($filtro = "", $valor = "", $ordenar = "", $pagi
                 $sql .= " ORDER BY o.fecPubli DESC";
                 break;
             case "trending":
-                $sql .= " LEFT JOIN (SELECT idObra, COUNT(*) as num_likes 
-                           FROM likes GROUP BY idObra) l ON o.idObra = l.idObra 
-                           ORDER BY COALESCE(l.num_likes, 0) DESC, o.fecPubli DESC";
+                $sql .= " ORDER BY num_likes DESC, o.fecPubli DESC";
                 break;
             default:
                 $sql .= " ORDER BY o.fecPubli DESC"; // Por defecto, ordenar por fecha descendente
         }
     } else {
         $sql .= " ORDER BY o.fecPubli DESC"; // Por defecto, ordenar por fecha descendente
-    }    // Aplicar límite para paginación - usar valores directamente en el SQL en lugar de parámetros
+    }
+    
+    // Aplicar límite para paginación - usar valores directamente en el SQL en lugar de parámetros
     $limite = (int)$limite;  // Convertir explícitamente a entero
     $offset = (int)$offset;  // Convertir explícitamente a entero
     $sql .= " LIMIT $limite OFFSET $offset";
@@ -175,7 +208,17 @@ function obtener_obras_usuario_filtradas($idUsu, $ordenar = "")
         return $respuesta;
     }
 
-    $sql = "SELECT * FROM obras WHERE idUsu = ?";
+    // Para trending, incluimos num_likes en el SELECT
+    if ($ordenar === "trending") {
+        $sql = "SELECT o.*, COALESCE(l.num_likes, 0) as num_likes 
+                FROM obras o 
+                LEFT JOIN (SELECT idObra, COUNT(*) as num_likes FROM likes GROUP BY idObra) l 
+                ON o.idObra = l.idObra 
+                WHERE o.idUsu = ?";
+    } else {
+        $sql = "SELECT * FROM obras WHERE idUsu = ?";
+    }
+    
     $parametros = [$idUsu];
     
     // Aplicar ordenación
@@ -185,9 +228,7 @@ function obtener_obras_usuario_filtradas($idUsu, $ordenar = "")
                 $sql .= " ORDER BY fecPubli DESC";
                 break;
             case "trending":
-                $sql .= " LEFT JOIN (SELECT idObra, COUNT(*) as num_likes 
-                           FROM likes GROUP BY idObra) l ON obras.idObra = l.idObra 
-                           ORDER BY COALESCE(l.num_likes, 0) DESC, fecPubli DESC";
+                $sql .= " ORDER BY num_likes DESC, fecPubli DESC";
                 break;
             default:
                 $sql .= " ORDER BY fecPubli DESC"; // Por defecto, ordenar por fecha descendente
