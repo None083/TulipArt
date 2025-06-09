@@ -3,6 +3,6 @@
     "description": "Proyecto TulipArt",
     "type": "project",
     "require": {
-        "php": "^7.4|^8.0"
+        "php": "^8.1"
     }
 }
