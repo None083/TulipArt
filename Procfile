@@ -1,1 +1,1 @@
-web: vendor/bin/heroku-php-apache2 backend/servicios_rest_protect
+web: php -S 0.0.0.0:8080 -t backend/servicios_rest_protect
