@@ -1,0 +1,1049 @@
+<?php
+
+use Firebase\JWT\JWT;
+use Firebase\JWT\Key;
+
+require 'Firebase/autoload.php';
+
+define("SERVIDOR_BD", "localhost");
+/*define("USUARIO_BD", "jose");
+define("CLAVE_BD", "josefa");*/
+define("USUARIO_BD","root");
+define("CLAVE_BD","");
+define("NOMBRE_BD", "tulipart");
+define("PASSWORD_API", "PASSWORD_DE_MI_APLICACION");
+
+
+
+function validateToken()
+{
+
+    $headers = apache_request_headers();
+    if (!isset($headers["Authorization"]))
+        return false; //Sin autorizacion
+    else {
+        $authorization = $headers["Authorization"];
+        $authorizationArray = explode(" ", $authorization);
+        $token = $authorizationArray[1];
+        try {
+            $info = JWT::decode($token, new Key(PASSWORD_API, 'HS256'));
+        } catch (\Throwable $th) {
+            return false; //Expirado
+        }
+
+        try {
+            $conexion = new PDO("mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD, USUARIO_BD, CLAVE_BD, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
+        } catch (PDOException $e) {
+
+            $respuesta["error"] = "Imposible conectar:" . $e->getMessage();
+            return $respuesta;
+        }
+
+        try {
+            $consulta = "select * from usuarios where idUsu=?";
+            $sentencia = $conexion->prepare($consulta);
+            $sentencia->execute([$info->data]);
+        } catch (PDOException $e) {
+            $respuesta["error"] = "Imposible realizar la consulta:" . $e->getMessage();
+            $sentencia = null;
+            $conexion = null;
+            return $respuesta;
+        }
+        if ($sentencia->rowCount() > 0) {
+            $respuesta["usuario"] = $sentencia->fetch(PDO::FETCH_ASSOC);
+
+            $payload['exp'] = time() + 3600;
+            $payload['data'] = $respuesta["usuario"]["idUsu"];
+            $jwt = JWT::encode($payload, PASSWORD_API, 'HS256');
+            $respuesta["token"] = $jwt;
+        } else
+            $respuesta["mensaje_baneo"] = "El usuario no se encuentra registrado en la BD";
+
+        $sentencia = null;
+        $conexion = null;
+        return $respuesta;
+    }
+}
+
+function login($usuario, $clave)
+{
+    try {
+        $conexion = new PDO("mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD, USUARIO_BD, CLAVE_BD, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
+    } catch (PDOException $e) {
+        $respuesta["error"] = "Imposible conectar:" . $e->getMessage();
+        return $respuesta;
+    }
+
+    try {
+        $consulta = "select * from usuarios where nombreUsuario=? and clave=?";
+        $sentencia = $conexion->prepare($consulta);
+        $sentencia->execute([$usuario, $clave]);
+    } catch (PDOException $e) {
+        $respuesta["error"] = "Imposible realizar la consulta:" . $e->getMessage();
+        $sentencia = null;
+        $conexion = null;
+        return $respuesta;
+    }
+
+    if ($sentencia->rowCount() > 0) {
+        $respuesta["usuario"] = $sentencia->fetch(PDO::FETCH_ASSOC);
+
+
+        $payload = ['exp' => time() + 3600, 'data' => $respuesta["usuario"]["idUsu"]];
+        $jwt = JWT::encode($payload, PASSWORD_API, 'HS256');
+        $respuesta["token"] = $jwt;
+    } else
+        $respuesta["mensaje"] = "El usuario no se encuentra registrado en la BD";
+
+
+    $sentencia = null;
+    $conexion = null;
+    return $respuesta;
+}
+
+function obtener_obras()
+{
+    try {
+        $conexion = new PDO("mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD, USUARIO_BD, CLAVE_BD, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
+    } catch (PDOException $e) {
+        $respuesta["error"] = "No ha podido conectarse a la base de batos: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    try {
+        $consulta = "select * from obras order by idObra desc";
+        $sentencia = $conexion->prepare($consulta);
+        $sentencia->execute();
+    } catch (PDOException $e) {
+        $sentencia = null;
+        $conexion = null;
+        $respuesta["error"] = "No he podido realizarse la consulta: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    $respuesta["obras"] = $sentencia->fetchAll(PDO::FETCH_ASSOC);
+    $sentencia = null;
+    $conexion = null;
+    return $respuesta;
+}
+
+function obtener_fotos_obra($idObra)
+{
+    try {
+        $conexion = new PDO("mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD, USUARIO_BD, CLAVE_BD, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
+    } catch (PDOException $e) {
+        $respuesta["error"] = "No ha podido conectarse a la base de datos: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    try {
+        $consulta = "SELECT * FROM fotos WHERE idObra=?";
+        $sentencia = $conexion->prepare($consulta);
+        $sentencia->execute([$idObra]);
+    } catch (PDOException $e) {
+        $sentencia = null;
+        $conexion = null;
+        $respuesta["error"] = "No se ha podido realizar la consulta: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    $respuesta["fotos"] = $sentencia->fetchAll(PDO::FETCH_ASSOC);
+    $sentencia = null;
+    $conexion = null;
+    return $respuesta;
+}
+
+function obtener_usuario($idUsu)
+{
+    try {
+        $conexion = new PDO("mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD, USUARIO_BD, CLAVE_BD, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
+    } catch (PDOException $e) {
+        $respuesta["error"] = "No ha podido conectarse a la base de datos: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    try {
+        $consulta = "SELECT * FROM usuarios WHERE idUsu = ?";
+        $sentencia = $conexion->prepare($consulta);
+        $sentencia->execute([$idUsu]);
+    } catch (PDOException $e) {
+        $sentencia = null;
+        $conexion = null;
+        $respuesta["error"] = "No se ha podido realizar la consulta: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    $respuesta["usuario"] = $sentencia->fetch(PDO::FETCH_ASSOC);
+    $sentencia = null;
+    $conexion = null;
+    return $respuesta;
+}
+
+function obtener_seguidores($idUsu)
+{
+    try {
+        $conexion = new PDO("mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD, USUARIO_BD, CLAVE_BD, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
+    } catch (PDOException $e) {
+        $respuesta["error"] = "No ha podido conectarse a la base de datos: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    try {
+        $consulta = "SELECT * FROM siguen WHERE idSeguido = ?";
+        $sentencia = $conexion->prepare($consulta);
+        $sentencia->execute([$idUsu]);
+    } catch (PDOException $e) {
+        $sentencia = null;
+        $conexion = null;
+        $respuesta["error"] = "No se ha podido realizar la consulta: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    $respuesta["seguidores"] = $sentencia->fetchAll(PDO::FETCH_ASSOC);
+    $sentencia = null;
+    $conexion = null;
+    return $respuesta;
+}
+
+function obtener_obras_usuario($idUsu)
+{
+    try {
+        $conexion = new PDO("mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD, USUARIO_BD, CLAVE_BD, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
+    } catch (PDOException $e) {
+        $respuesta["error"] = "No ha podido conectarse a la base de datos: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    try {
+        $consulta = "SELECT * FROM obras WHERE idUsu = ? ORDER BY fecPubli DESC";
+        $sentencia = $conexion->prepare($consulta);
+        $sentencia->execute([$idUsu]);
+    } catch (PDOException $e) {
+        $sentencia = null;
+        $conexion = null;
+        $respuesta["error"] = "No se ha podido realizar la consulta: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    $respuesta["obras_usuario"] = $sentencia->fetchAll(PDO::FETCH_ASSOC);
+    $sentencia = null;
+    $conexion = null;
+    return $respuesta;
+}
+
+// Obtener los likes de una obra
+function obtener_likes_obra($idObra)
+{
+    try {
+        $conexion = new PDO("mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD, USUARIO_BD, CLAVE_BD, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
+    } catch (PDOException $e) {
+        $respuesta["error"] = "No ha podido conectarse a la base de datos: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    try {
+        $consulta = "SELECT * FROM likes WHERE idObra = ?";
+        $sentencia = $conexion->prepare($consulta);
+        $sentencia->execute([$idObra]);
+    } catch (PDOException $e) {
+        $sentencia = null;
+        $conexion = null;
+        $respuesta["error"] = "No se ha podido realizar la consulta: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    $respuesta["likes_obra"] = $sentencia->fetchAll(PDO::FETCH_ASSOC);
+    $sentencia = null;
+    $conexion = null;
+    return $respuesta;
+}
+
+// Dar like a una obra
+function dar_like_obra($idUsu, $idObra)
+{
+    try {
+        $conexion = new PDO("mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD, USUARIO_BD, CLAVE_BD, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
+    } catch (PDOException $e) {
+        $respuesta["error"] = "No ha podido conectarse a la base de datos: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    try {
+        $consulta = "INSERT IGNORE INTO likes (idUsuLike, idObra) VALUES (?, ?)";
+        $sentencia = $conexion->prepare($consulta);
+        $sentencia->execute([$idUsu, $idObra]);
+    } catch (PDOException $e) {
+        $sentencia = null;
+        $conexion = null;
+        $respuesta["error"] = "No se ha podido realizar la consulta: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    $respuesta["mensaje"] = "Like añadido correctamente";
+    $sentencia = null;
+    $conexion = null;
+    return $respuesta;
+}
+
+// Quitar like a una obra
+function quitar_like_obra($idUsu, $idObra)
+{
+    try {
+        $conexion = new PDO("mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD, USUARIO_BD, CLAVE_BD, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
+    } catch (PDOException $e) {
+        $respuesta["error"] = "No ha podido conectarse a la base de datos: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    try {
+        $consulta = "DELETE FROM likes WHERE idUsuLike = ? AND idObra = ?";
+        $sentencia = $conexion->prepare($consulta);
+        $sentencia->execute([$idUsu, $idObra]);
+    } catch (PDOException $e) {
+        $sentencia = null;
+        $conexion = null;
+        $respuesta["error"] = "No se ha podido realizar la consulta: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    $respuesta["mensaje"] = "Like eliminado correctamente";
+    $sentencia = null;
+    $conexion = null;
+    return $respuesta;
+}
+
+// Obtener los comentarios de una obra
+function obtener_comentarios_obra($idObra)
+{
+    try {
+        $conexion = new PDO("mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD, USUARIO_BD, CLAVE_BD, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
+    } catch (PDOException $e) {
+        $respuesta["error"] = "No ha podido conectarse a la base de datos: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    try {
+        $consulta = "SELECT * FROM comentan WHERE idObra = ?";
+        $sentencia = $conexion->prepare($consulta);
+        $sentencia->execute([$idObra]);
+    } catch (PDOException $e) {
+        $sentencia = null;
+        $conexion = null;
+        $respuesta["error"] = "No se ha podido realizar la consulta: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    $respuesta["comentarios_obra"] = $sentencia->fetchAll(PDO::FETCH_ASSOC);
+    $sentencia = null;
+    $conexion = null;
+    return $respuesta;
+}
+
+// Obtener los seguidores de un usuario
+function obtener_seguidores_usuario($idUsu)
+{
+    try {
+        $conexion = new PDO("mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD, USUARIO_BD, CLAVE_BD, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
+    } catch (PDOException $e) {
+        $respuesta["error"] = "No ha podido conectarse a la base de datos: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    try {
+        $consulta = "SELECT * FROM siguen WHERE idSeguido = ?";
+        $sentencia = $conexion->prepare($consulta);
+        $sentencia->execute([$idUsu]);
+    } catch (PDOException $e) {
+        $sentencia = null;
+        $conexion = null;
+        $respuesta["error"] = "No se ha podido realizar la consulta: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    $respuesta["seguidores_usuario"] = $sentencia->fetchAll(PDO::FETCH_ASSOC);
+    $sentencia = null;
+    $conexion = null;
+    return $respuesta;
+}
+
+// Seguir a un usuario
+function seguir_usuario($idUsuSeguidor, $idUsuSeguido)
+{
+    try {
+        $conexion = new PDO("mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD, USUARIO_BD, CLAVE_BD, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
+    } catch (PDOException $e) {
+        $respuesta["error"] = "No ha podido conectarse a la base de datos: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    try {
+        $consulta = "INSERT IGNORE INTO siguen (idSeguidor, idSeguido) VALUES (?, ?)";
+        $sentencia = $conexion->prepare($consulta);
+        $sentencia->execute([$idUsuSeguidor, $idUsuSeguido]);
+    } catch (PDOException $e) {
+        $sentencia = null;
+        $conexion = null;
+        $respuesta["error"] = "No se ha podido realizar la consulta: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    $respuesta["mensaje"] = "Usuario seguido correctamente";
+    $sentencia = null;
+    $conexion = null;
+    return $respuesta;
+}
+
+// Dejar de seguir a un usuario
+function dejar_seguir_usuario($idUsuSeguidor, $idUsuSeguido)
+{
+    try {
+        $conexion = new PDO("mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD, USUARIO_BD, CLAVE_BD, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
+    } catch (PDOException $e) {
+        $respuesta["error"] = "No ha podido conectarse a la base de datos: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    try {
+        $consulta = "DELETE FROM siguen WHERE idSeguidor = ? AND idSeguido = ?";
+        $sentencia = $conexion->prepare($consulta);
+        $sentencia->execute([$idUsuSeguidor, $idUsuSeguido]);
+    } catch (PDOException $e) {
+        $sentencia = null;
+        $conexion = null;
+        $respuesta["error"] = "No se ha podido realizar la consulta: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    $respuesta["mensaje"] = "Dejado de seguir correctamente";
+    $sentencia = null;
+    $conexion = null;
+    return $respuesta;
+}
+
+// obtener obra por id
+function obtener_obra($idObra)
+{
+    try {
+        $conexion = new PDO("mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD, USUARIO_BD, CLAVE_BD, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
+    } catch (PDOException $e) {
+        $respuesta["error"] = "No ha podido conectarse a la base de datos: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    try {
+        $consulta = "SELECT * FROM obras WHERE idObra = ?";
+        $sentencia = $conexion->prepare($consulta);
+        $sentencia->execute([$idObra]);
+    } catch (PDOException $e) {
+        $sentencia = null;
+        $conexion = null;
+        $respuesta["error"] = "No se ha podido realizar la consulta: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    if ($sentencia->rowCount() > 0) {
+        $respuesta["obra"] = $sentencia->fetch(PDO::FETCH_ASSOC);
+    } else {
+        $respuesta["mensaje"] = "Obra no encontrada";
+    }
+
+    $sentencia = null;
+    $conexion = null;
+    return $respuesta;
+}
+
+// Obtener todas las etiquetas
+function obtener_etiquetas()
+{
+    try {
+        $conexion = new PDO("mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD, USUARIO_BD, CLAVE_BD, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
+    } catch (PDOException $e) {
+        $respuesta["error"] = "No ha podido conectarse a la base de datos: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    try {
+        $consulta = "SELECT * FROM etiquetas";
+        $sentencia = $conexion->prepare($consulta);
+        $sentencia->execute();
+    } catch (PDOException $e) {
+        $sentencia = null;
+        $conexion = null;
+        $respuesta["error"] = "No se ha podido realizar la consulta: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    $respuesta["etiquetas"] = $sentencia->fetchAll(PDO::FETCH_ASSOC);
+    $sentencia = null;
+    $conexion = null;
+    return $respuesta;
+}
+
+// Crear una nueva etiqueta
+function crear_etiqueta($datos)
+{
+    try {
+        $conexion = new PDO("mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD, USUARIO_BD, CLAVE_BD, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
+    } catch (PDOException $e) {
+        $respuesta["error"] = "No ha podido conectarse a la base de datos: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    try {
+        $consulta = "INSERT INTO etiquetas (nombre) VALUES (?)";
+        $sentencia = $conexion->prepare($consulta);
+        $sentencia->execute($datos);
+        $idEtiqueta = $conexion->lastInsertId(); // Obtener el ID de la etiqueta recién insertada
+        $respuesta["mensaje"] = "Etiqueta creada correctamente";
+        $respuesta["idEtiqueta"] = $idEtiqueta; // Devolver el ID
+    } catch (PDOException $e) {
+        $sentencia = null;
+        $conexion = null;
+        $respuesta["error"] = "No se ha podido realizar la consulta: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    $sentencia = null;
+    $conexion = null;
+    return $respuesta;
+}
+
+// crear relacion etiqueta obra
+function crear_etiqueta_obra($datos)
+{
+    try {
+        $conexion = new PDO("mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD, USUARIO_BD, CLAVE_BD, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
+    } catch (PDOException $e) {
+        $respuesta["error"] = "No ha podido conectarse a la base de datos: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    try {
+        $consulta = "INSERT INTO etiquetasobras (idObra, idEtiqueta) VALUES (?, ?)";
+        $sentencia = $conexion->prepare($consulta);
+        $sentencia->execute($datos);
+        $respuesta["mensaje"] = "Relación creada correctamente";
+    } catch (PDOException $e) {
+        $sentencia = null;
+        $conexion = null;
+        $respuesta["error"] = "No se ha podido realizar la consulta: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    $sentencia = null;
+    $conexion = null;
+    return $respuesta;
+}
+
+// Buscar una etiqueta por nombre
+function buscar_etiqueta($nombre)
+{
+    try {
+        $conexion = new PDO("mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD, USUARIO_BD, CLAVE_BD, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
+    } catch (PDOException $e) {
+        $respuesta["error"] = "No ha podido conectarse a la base de datos: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    try {
+        $consulta = "SELECT * FROM etiquetas WHERE nombre = ?";
+        $sentencia = $conexion->prepare($consulta);
+        $sentencia->execute([$nombre]);
+    } catch (PDOException $e) {
+        $sentencia = null;
+        $conexion = null;
+        $respuesta["error"] = "No se ha podido realizar la consulta: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    $respuesta["etiquetas"] = $sentencia->fetchAll(PDO::FETCH_ASSOC);
+    $sentencia = null;
+    $conexion = null;
+    return $respuesta;
+}
+
+// Función para obtener una imagen por su ID
+function obtener_imagen_por_id($idFoto) {
+    try {
+        $conexion = new PDO("mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD, USUARIO_BD, CLAVE_BD, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
+    } catch (PDOException $e) {
+        header("HTTP/1.1 500 Internal Server Error");
+        echo "Error de conexión a la base de datos";
+        exit;
+    }
+
+    try {
+        $consulta = "SELECT foto FROM fotos WHERE idFoto = ?";
+        $sentencia = $conexion->prepare($consulta);
+        $sentencia->execute([$idFoto]);
+        $resultado = $sentencia->fetch(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        header("HTTP/1.1 500 Internal Server Error");
+        echo "Error al consultar la base de datos";
+        exit;
+    }
+
+    if (!$resultado) {
+        header("HTTP/1.1 404 Not Found");
+        echo "Imagen no encontrada";
+        exit;
+    }
+
+    // La ruta ahora utiliza el nuevo formato de nombres en la carpeta correcta
+    $rutaArchivo = '../images/obras/' . $resultado['foto'];
+    
+    if (!file_exists($rutaArchivo)) {
+        header("HTTP/1.1 404 Not Found");
+        echo "Archivo de imagen no encontrado";
+        exit;
+    }
+
+    $extension = pathinfo($rutaArchivo, PATHINFO_EXTENSION);
+    switch (strtolower($extension)) {
+        case 'jpg':
+        case 'jpeg':
+            header('Content-Type: image/jpeg');
+            break;
+        case 'png':
+            header('Content-Type: image/png');
+            break;
+        case 'gif':
+            header('Content-Type: image/gif');
+            break;
+        default:
+            header('Content-Type: application/octet-stream');
+    }
+
+    readfile($rutaArchivo);
+    exit;
+}
+
+// Añadir a funciones_CTES_servicios.php
+function crear_obra_con_imagenes($idUsu, $title, $description, $downloadable, $matureContent, $aiGenerated, $imagenes_temporal) {
+    try {
+        $conexion = new PDO("mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD, USUARIO_BD, CLAVE_BD, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
+    } catch (PDOException $e) {
+        $respuesta["error"] = "No ha podido conectarse a la base de datos: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    // Iniciar transacción para asegurar que todo se ejecuta o nada
+    $conexion->beginTransaction();
+
+    try {
+        // 1. Crear la obra
+        $consulta = "INSERT INTO obras (idUsu, nombreObra, descObra, fecPubli, downloadable, matureContent, aiGenerated) VALUES (?, ?, ?, NOW(), ?, ?, ?)";
+        $sentencia = $conexion->prepare($consulta);
+        $sentencia->execute([$idUsu, $title, $description, $downloadable, $matureContent, $aiGenerated]);
+        $idObra = $conexion->lastInsertId();
+        
+        // Crear un nombre seguro para la URL a partir del título (sin espacios ni caracteres especiales)
+        $nombreSeguro = strtolower(preg_replace('/[^a-zA-Z0-9]/', '_', $title));
+        $nombreSeguro = preg_replace('/_+/', '_', $nombreSeguro); // Eliminar múltiples barras bajas consecutivas
+        $nombreSeguro = trim($nombreSeguro, '_'); // Eliminar barras bajas del inicio y final
+        
+        if (empty($nombreSeguro)) {
+            $nombreSeguro = "obra"; // Si después de limpiar queda vacío, usar un nombre predeterminado
+        }
+        
+        // 2. Procesar las imágenes temporales
+        $contador = 0; // Contador para numerar las imágenes
+        foreach ($imagenes_temporal as $imagen) {
+            $nombreTemporal = $imagen['nombreTemporal'];
+            $nombreOriginal = $imagen['nombreOriginal'];
+            
+            // Verificar que el archivo existe
+            $rutaTemporal = '../images/temporales/' . $nombreTemporal;
+            if (!file_exists($rutaTemporal)) {
+                // Si una imagen no existe, hacer rollback
+                $conexion->rollBack();
+                $respuesta["error"] = "Una de las imágenes temporales no existe: " . $nombreTemporal;
+                return $respuesta;
+            }
+            
+            // Obtener la extensión del archivo
+            $extension = pathinfo($nombreTemporal, PATHINFO_EXTENSION);
+            
+            // Crear el nuevo nombre según el patrón: nombreObra_idObra_numeroSecuencial.extension
+            $nuevoNombre = $nombreSeguro . '_' . $idObra . '_' . $contador . '.' . $extension;
+            
+            // Ruta destino para la imagen final
+            $rutaDestino = '../images/obras/' . $nuevoNombre;
+            
+            // Crear directorio si no existe
+            if (!file_exists('../images/obras/')) {
+                mkdir('../images/obras/', 0777, true);
+            }
+            
+            // Copiar el archivo (no mover aún para evitar problemas si hay error)
+            if (!copy($rutaTemporal, $rutaDestino)) {
+                // Si falla la copia, hacer rollback
+                $conexion->rollBack();
+                $respuesta["error"] = "No se pudo copiar la imagen: " . $nombreTemporal;
+                return $respuesta;
+            }
+            
+            // Insertar en la base de datos con el nuevo nombre
+            $consulta = "INSERT INTO fotos (idObra, foto) VALUES (?, ?)";
+            $sentencia = $conexion->prepare($consulta);
+            $sentencia->execute([$idObra, $nuevoNombre]);
+            
+            // Incrementar el contador para la siguiente imagen
+            $contador++;
+        }
+        
+        // Si todo ha ido bien, confirmar la transacción y eliminar los archivos temporales
+        $conexion->commit();
+        
+        // Ahora que la transacción está confirmada, eliminar los archivos temporales
+        foreach ($imagenes_temporal as $imagen) {
+            $rutaTemporal = '../images/temporales/' . $imagen['nombreTemporal'];
+            if (file_exists($rutaTemporal)) {
+                unlink($rutaTemporal);
+            }
+        }
+        
+        $respuesta["mensaje"] = "Obra creada correctamente";
+        $respuesta["idObra"] = $idObra;
+    } catch (PDOException $e) {
+        // Si hay cualquier error, deshacer los cambios
+        $conexion->rollBack();
+        $sentencia = null;
+        $conexion = null;
+        $respuesta["error"] = "No se ha podido realizar la consulta: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    $sentencia = null;
+    $conexion = null;
+    return $respuesta;
+}
+
+// Función para obtener los comentarios de una obra con información del usuario a partir de idObra
+function obtener_comentarios_obra_user($idObra) {
+    try {
+        $conexion = new PDO("mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD, USUARIO_BD, CLAVE_BD, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
+    } catch (PDOException $e) {
+        $respuesta["error"] = "No ha podido conectarse a la base de datos: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    try {
+        $consulta = "SELECT c.*, u.nombreUsuario, u.fotoPerfil FROM comentan c
+                    JOIN usuarios u ON c.idUsu = u.idUsu
+                    WHERE c.idObra = ? order by c.numComentario desc";
+        $sentencia = $conexion->prepare($consulta);
+        $sentencia->execute([$idObra]);
+    } catch (PDOException $e) {
+        $respuesta["error"] = "No se ha podido realizar la consulta: " . $e->getMessage();
+    }
+
+    if ($sentencia->rowCount() > 0) {
+        $respuesta["comentarios_info"] = $sentencia->fetchAll(PDO::FETCH_ASSOC);
+    } else {
+        $respuesta["mensaje"] = "No hay comentarios para esta obra.";
+    }
+
+    $sentencia = null;
+    $conexion = null;
+    return $respuesta;
+}
+
+// Función para crear un comentario en una obra
+function crear_comentario_obra($idUsu, $idObra, $comentario)
+{
+    try {
+        $conexion = new PDO("mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD, USUARIO_BD, CLAVE_BD, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
+    } catch (PDOException $e) {
+        $respuesta["error"] = "No ha podido conectarse a la base de datos: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    try {
+        $consulta = "INSERT INTO comentan (idUsu, idObra, textoComentario, fecCom, horaCom) VALUES (?, ?, ?, NOW(), CURTIME())";
+        $sentencia = $conexion->prepare($consulta);
+        $sentencia->execute([$idUsu, $idObra, $comentario]);
+        $respuesta["mensaje"] = "Comentario creado correctamente";
+    } catch (PDOException $e) {
+        $sentencia = null;
+        $conexion = null;
+        $respuesta["error"] = "No se ha podido realizar la consulta: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    $sentencia = null;
+    $conexion = null;
+    return $respuesta;
+}
+
+// Función para eliminar un comentario de una obra
+function eliminar_comentario_obra($idComentario) {
+    try {
+        $conexion = new PDO("mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD, USUARIO_BD, CLAVE_BD, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
+    } catch (PDOException $e) {
+        $respuesta["error"] = "No ha podido conectarse a la base de datos: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    try {
+        $consulta = "DELETE FROM comentan WHERE numComentario = ?";
+        $sentencia = $conexion->prepare($consulta);
+        $sentencia->execute([$idComentario]);
+        $respuesta["mensaje"] = "Comentario eliminado correctamente";
+    } catch (PDOException $e) {
+        $sentencia = null;
+        $conexion = null;
+        $respuesta["error"] = "No se ha podido realizar la consulta: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    $sentencia = null;
+    $conexion = null;
+    return $respuesta;
+}
+
+// Función para editar un comentario de una obra
+function editar_comentario_obra($idComentario, $nuevoComentario) {
+    try {
+        $conexion = new PDO("mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD, USUARIO_BD, CLAVE_BD, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
+    } catch (PDOException $e) {
+        $respuesta["error"] = "No ha podido conectarse a la base de datos: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    try {
+        $consulta = "UPDATE comentan SET textoComentario = ? WHERE numComentario = ?";
+        $sentencia = $conexion->prepare($consulta);
+        $sentencia->execute([$nuevoComentario, $idComentario]);
+        $respuesta["mensaje"] = "Comentario editado correctamente";
+    } catch (PDOException $e) {
+        $sentencia = null;
+        $conexion = null;
+        $respuesta["error"] = "No se ha podido realizar la consulta: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    $sentencia = null;
+    $conexion = null;
+    return $respuesta;
+}
+
+// Borrar una obra, fotos asociadas y ralación etiquetasobras
+function borrar_obra($idObra) {
+    $respuesta = array();
+
+    try {
+        $conexion = new PDO("mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD, USUARIO_BD, CLAVE_BD, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
+    } catch (PDOException $e) {
+        $respuesta["error"] = "No ha podido conectarse a la base de datos: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    try {
+        // Borrar las fotos asociadas
+        $consulta = "DELETE FROM fotos WHERE idObra = ?";
+        $sentencia = $conexion->prepare($consulta);
+        $sentencia->execute([$idObra]);
+
+        // Borrar la relación en etiquetasobras
+        $consulta = "DELETE FROM etiquetasobras WHERE idObra = ?";
+        $sentencia = $conexion->prepare($consulta);
+        $sentencia->execute([$idObra]);
+
+        // Borrar la obra
+        $consulta = "DELETE FROM obras WHERE idObra = ?";
+        $sentencia = $conexion->prepare($consulta);
+        $sentencia->execute([$idObra]);
+
+        $respuesta["mensaje"] = "Obra borrada correctamente";
+    } catch (PDOException $e) {
+        $sentencia = null;
+        $conexion = null;
+        $respuesta["error"] = "No se ha podido realizar la consulta: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    $sentencia = null;
+    $conexion = null;
+    return $respuesta;
+}
+
+// Obtener las alertas de un usuario (comentan, likes y siguen visto = 0)
+// Siguen
+function obtener_alertas_seguidores($idUsu) {
+    $respuesta = array();
+
+    try {
+        $conexion = new PDO("mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD, USUARIO_BD, CLAVE_BD, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
+    } catch (PDOException $e) {
+        $respuesta["error"] = "No ha podido conectarse a la base de datos: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    try {
+        $consulta = "SELECT usuarios.nombreUsuario, usuarios.idUsu FROM usuarios join siguen on usuarios.idUsu = siguen.idSeguidor WHERE siguen.idSeguido = ? AND siguen.visto = 0";
+        $sentencia = $conexion->prepare($consulta);
+        $sentencia->execute([$idUsu]);
+        $respuesta["alertas_seguidores"] = $sentencia->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        $sentencia = null;
+        $conexion = null;
+        $respuesta["error"] = "No se ha podido realizar la consulta: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    $sentencia = null;
+    $conexion = null;
+    return $respuesta;
+}
+
+// Likes
+function obtener_alertas_likes($idUsu) {
+    $respuesta = array();
+
+    try {
+        $conexion = new PDO("mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD, USUARIO_BD, CLAVE_BD, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
+    } catch (PDOException $e) {
+        $respuesta["error"] = "No ha podido conectarse a la base de datos: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    try {
+        $consulta = "SELECT u.nombreUsuario AS usuario_like, o.nombreObra AS nombre_obra, l.idObra, l.idUsuLike
+             FROM likes l
+             JOIN usuarios u ON l.idUsuLike = u.idUsu
+             JOIN obras o ON l.idObra = o.idObra
+             WHERE o.idUsu = ? AND l.visto = 0";
+        
+        $sentencia = $conexion->prepare($consulta);
+        $sentencia->execute([$idUsu]);
+        $respuesta["alertas_likes"] = $sentencia->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        $sentencia = null;
+        $conexion = null;
+        $respuesta["error"] = "No se ha podido realizar la consulta: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    $sentencia = null;
+    $conexion = null;
+    return $respuesta;
+}
+
+// Comentarios
+function obtener_alertas_comentarios($idUsu) {
+    $respuesta = array();
+
+    try {
+        $conexion = new PDO("mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD, USUARIO_BD, CLAVE_BD, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
+    } catch (PDOException $e) {
+        $respuesta["error"] = "No ha podido conectarse a la base de datos: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    try {
+        $consulta = "SELECT u.nombreUsuario AS usuario_comentario, o.nombreObra AS nombre_obra, c.idObra, c.numComentario, u.idUsu
+             FROM comentan c
+             JOIN usuarios u ON c.idUsu = u.idUsu
+             JOIN obras o ON c.idObra = o.idObra
+             WHERE o.idUsu = ? AND c.visto = 0";
+        
+        $sentencia = $conexion->prepare($consulta);
+        $sentencia->execute([$idUsu]);
+        $respuesta["alertas_comentarios"] = $sentencia->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        $sentencia = null;
+        $conexion = null;
+        $respuesta["error"] = "No se ha podido realizar la consulta: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    $sentencia = null;
+    $conexion = null;
+    return $respuesta;
+}
+
+// Marcar alertas como vistas
+//Follow
+function marcar_alerta_follow_visto($idSeguido, $idSeguidor) {
+    $respuesta = array();
+
+    try {
+        $conexion = new PDO("mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD, USUARIO_BD, CLAVE_BD, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
+    } catch (PDOException $e) {
+        $respuesta["error"] = "No ha podido conectarse a la base de datos: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    try {
+        $consulta = "UPDATE siguen SET visto = 1 WHERE idSeguido = ? AND idSeguidor = ?";
+        $sentencia = $conexion->prepare($consulta);
+        $sentencia->execute([$idSeguido, $idSeguidor]);
+        $respuesta["mensaje"] = "Alerta de seguimiento marcada como vista";
+    } catch (PDOException $e) {
+        $sentencia = null;
+        $conexion = null;
+        $respuesta["error"] = "No se ha podido realizar la consulta: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    $sentencia = null;
+    $conexion = null;
+    return $respuesta;
+}
+
+//Like
+function marcar_alerta_like_visto($idObra, $idUsu) {
+    $respuesta = array();
+
+    try {
+        $conexion = new PDO("mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD, USUARIO_BD, CLAVE_BD, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
+    } catch (PDOException $e) {
+        $respuesta["error"] = "No ha podido conectarse a la base de datos: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    try {
+        $consulta = "UPDATE likes SET visto = 1 WHERE idObra = ? AND idUsuLike = ?";
+        $sentencia = $conexion->prepare($consulta);
+        $sentencia->execute([$idObra, $idUsu]);
+        $respuesta["mensaje"] = "Alerta de like marcada como vista";
+    } catch (PDOException $e) {
+        $sentencia = null;
+        $conexion = null;
+        $respuesta["error"] = "No se ha podido realizar la consulta: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    $sentencia = null;
+    $conexion = null;
+    return $respuesta;
+}
+
+//Comentario
+function marcar_alerta_comentario_visto($idComentario) {
+    $respuesta = array();
+
+    try {
+        $conexion = new PDO("mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD, USUARIO_BD, CLAVE_BD, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
+    } catch (PDOException $e) {
+        $respuesta["error"] = "No ha podido conectarse a la base de datos: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    try {
+        $consulta = "UPDATE comentan SET visto = 1 WHERE numComentario = ?";
+        $sentencia = $conexion->prepare($consulta);
+        $sentencia->execute([$idComentario]);
+        $respuesta["mensaje"] = "Alerta de comentario marcada como vista";
+    } catch (PDOException $e) {
+        $sentencia = null;
+        $conexion = null;
+        $respuesta["error"] = "No se ha podido realizar la consulta: " . $e->getMessage();
+        return $respuesta;
+    }
+
+    $sentencia = null;
+    $conexion = null;
+    return $respuesta;
+}
