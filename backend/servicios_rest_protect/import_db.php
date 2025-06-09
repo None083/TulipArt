@@ -8,6 +8,12 @@ $port = getenv('MYSQLPORT');
 
 // Para debugging - Mostrar valores (comentar en producción)
 echo "Intentando conectar a la base de datos...\n";
+// Verificar si el archivo SQL existe
+$sqlFilePath = __DIR__ . '/tulipart.sql';
+if (!file_exists($sqlFilePath)) {
+    die("Error: El archivo SQL no se encuentra en la ruta: " . $sqlFilePath . "\n");
+}
+echo "Archivo SQL encontrado en la ruta: " . $sqlFilePath . "\n";
 echo "Host: " . $host . "\n";
 echo "Usuario: " . $user . "\n";
 echo "Base de datos: " . $db . "\n";
