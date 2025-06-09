@@ -4,6 +4,10 @@
 error_reporting(E_ALL & ~E_DEPRECATED & ~E_WARNING & ~E_NOTICE);
 ini_set('display_errors', 0);
 
+$app->get('/', function () {
+    echo "Bienvenido a TulipArt!";
+});
+
 // Crear estructura de directorios si no existe
 $directorios = [
     '../images',
