@@ -16,9 +16,9 @@ ini_set('display_errors', 0);
 
 // Crear estructura de directorios si no existe
 $directorios = [
-    '../images',
-    '../images/temporales',
-    '../images/obras'
+    'images',
+    'images/temporales',
+    'images/obras'
 ];
 
 foreach ($directorios as $dir) {
@@ -146,11 +146,11 @@ $app->post('/subir_imagen_temporal', function ($request) {
     $nombreArchivo = uniqid() . '.' . $extension;
 
     // Guardar en carpeta temporal
-    $rutaDestino = '../images/temporales/' . $nombreArchivo;
+    $rutaDestino = 'images/temporales/' . $nombreArchivo;
 
     // Crear directorio si no existe
-    if (!file_exists('../images/temporales/')) {
-        mkdir('../images/temporales/', 0777, true);
+    if (!file_exists('images/temporales/')) {
+        mkdir('images/temporales/', 0777, true);
     }
 
     // Mover el archivo
@@ -160,7 +160,7 @@ $app->post('/subir_imagen_temporal', function ($request) {
     }
 
     // Construir la URL absoluta correcta para la imagen
-    $urlBase = "http://localhost/Proyectos/TulipArt/backend/images/temporales/";
+    $urlBase = "http://localhost/Proyectos/TulipArt/backeimages/temporales/";
     $urlTemporal = $urlBase . $nombreArchivo;
 
     // Devolver información foto temporal
@@ -196,7 +196,7 @@ $app->post('/limpiar_imagenes_temporales', function ($request) {
 
             foreach ($imagenes as $imagen) {
                 if (isset($imagen['nombreTemporal'])) {
-                    $rutaArchivo = '../images/temporales/' . $imagen['nombreTemporal'];
+                    $rutaArchivo = 'images/temporales/' . $imagen['nombreTemporal'];
                     if (file_exists($rutaArchivo)) {
                         if (unlink($rutaArchivo)) {
                             $eliminadas++;

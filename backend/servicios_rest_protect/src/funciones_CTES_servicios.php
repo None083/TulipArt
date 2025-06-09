@@ -591,7 +591,7 @@ function obtener_imagen_por_id($idFoto) {
     }
 
     // La ruta ahora utiliza el nuevo formato de nombres en la carpeta correcta
-    $rutaArchivo = '../images/obras/' . $resultado['foto'];
+    $rutaArchivo = 'images/obras/' . $resultado['foto'];
     
     if (!file_exists($rutaArchivo)) {
         header("HTTP/1.1 404 Not Found");
@@ -654,7 +654,7 @@ function crear_obra_con_imagenes($idUsu, $title, $description, $downloadable, $m
             $nombreOriginal = $imagen['nombreOriginal'];
             
             // Verificar que el archivo existe
-            $rutaTemporal = '../images/temporales/' . $nombreTemporal;
+            $rutaTemporal = 'images/temporales/' . $nombreTemporal;
             if (!file_exists($rutaTemporal)) {
                 // Si una imagen no existe, hacer rollback
                 $conexion->rollBack();
@@ -669,11 +669,11 @@ function crear_obra_con_imagenes($idUsu, $title, $description, $downloadable, $m
             $nuevoNombre = $nombreSeguro . '_' . $idObra . '_' . $contador . '.' . $extension;
             
             // Ruta destino para la imagen final
-            $rutaDestino = '../images/obras/' . $nuevoNombre;
+            $rutaDestino = 'images/obras/' . $nuevoNombre;
             
             // Crear directorio si no existe
-            if (!file_exists('../images/obras/')) {
-                mkdir('../images/obras/', 0777, true);
+            if (!file_exists('images/obras/')) {
+                mkdir('images/obras/', 0777, true);
             }
             
             // Copiar el archivo (no mover aún para evitar problemas si hay error)
@@ -698,7 +698,7 @@ function crear_obra_con_imagenes($idUsu, $title, $description, $downloadable, $m
         
         // Ahora que la transacción está confirmada, eliminar los archivos temporales
         foreach ($imagenes_temporal as $imagen) {
-            $rutaTemporal = '../images/temporales/' . $imagen['nombreTemporal'];
+            $rutaTemporal = 'images/temporales/' . $imagen['nombreTemporal'];
             if (file_exists($rutaTemporal)) {
                 unlink($rutaTemporal);
             }
