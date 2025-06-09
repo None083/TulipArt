@@ -4,10 +4,6 @@
 error_reporting(E_ALL & ~E_DEPRECATED & ~E_WARNING & ~E_NOTICE);
 ini_set('display_errors', 0);
 
-$app->get('/', function () {
-    echo "Bienvenido a TulipArt!";
-});
-
 // Crear estructura de directorios si no existe
 $directorios = [
     '../images',
@@ -29,6 +25,9 @@ require "src/funciones_etiquetas.php";
 
 $app = new \Slim\App;
 
+$app->get('/', function () {
+    echo "Bienvenido a TulipArt!";
+});
 
 $app->get('/logueado', function () {
     $test = validateToken();
