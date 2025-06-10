@@ -56,7 +56,7 @@ function obtener_obras_por_etiquetas($etiquetas, $idObraExcluir = null)
         
         // Consulta SQL para encontrar obras que comparten al menos una de estas etiquetas
         $consulta = "SELECT DISTINCT o.* FROM obras o
-                    INNER JOIN etiquetasObras eo ON o.idObra = eo.idObra
+                    INNER JOIN etiquetasobras eo ON o.idObra = eo.idObra
                     WHERE eo.idEtiqueta IN ($placeholders)";
         
         // Parámetros para la consulta
