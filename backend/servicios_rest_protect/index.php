@@ -1,20 +1,19 @@
 <?php
-// Configurar cabeceras CORS
+// cors
 header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Headers: Authorization, Content-Type");
 header("Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS");
 
-// Si es una petición OPTIONS, termina la ejecución aquí
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit();
 }
 
-// Ocultar avisos deprecados y warnings en producción
+// ocultar avisos deprecados y warnings
 error_reporting(E_ALL & ~E_DEPRECATED & ~E_WARNING & ~E_NOTICE);
 ini_set('display_errors', 0);
 
-// Crear estructura de directorios si no existe
+// crear estructura carpetas si no existe
 $directorios = [
     'images',
     'images/temporales',
@@ -55,7 +54,6 @@ $app->post('/login', function ($request) {
 });
 
 $app->get('/obras', function ($request) {
-    // Obtener parámetros de filtrado
     $filtro = $request->getQueryParam("filtro", "");
     $valor = $request->getQueryParam("valor", "");
     $ordenar = $request->getQueryParam("ordenar", "");
@@ -81,19 +79,16 @@ $app->get('/fotos_obra/{idObra}', function ($request) {
     echo json_encode(obtener_fotos_obra($idObra));
 });
 
-// Obtener imagen por ID
 $app->get('/obtener_imagen/{idFoto}', function ($request) {
     $idFoto = $request->getAttribute('idFoto');
     obtener_imagen_por_id($idFoto);
 });
 
-// Crear obra con imágenes
 $app->post('/crear_obra_con_imagenes', function ($request) {
     $test = validateToken();
-    //echo json_encode($test);
+
     if (is_array($test)) {
         if (isset($test["usuario"])) {
-            // Obtener datos obra
             $idUsu = $request->getParam("idUsu");
             $title = $request->getParam("title");
             $description = $request->getParam("description");
@@ -102,13 +97,12 @@ $app->post('/crear_obra_con_imagenes', function ($request) {
             $aiGenerated = $request->getParam("aiGenerated");
             $imagenes_temporal = json_decode($request->getParam("imagenes_temporal"), true);
 
-            // Verificar datos obligatorios
+            // verificar datos obligatorios
             if (!$idUsu || !$title || !$description || !$imagenes_temporal) {
                 echo json_encode(["error" => "Faltan datos obligatorios"]);
                 return;
             }
 
-            // Pasar datos a la función para crear obra con imágenes
             $resultado = crear_obra_con_imagenes($idUsu, $title, $description, $downloadable, $matureContent, $aiGenerated, $imagenes_temporal);
 
             echo json_encode($resultado);
@@ -119,7 +113,7 @@ $app->post('/crear_obra_con_imagenes', function ($request) {
 });
 
 $app->post('/subir_imagen_temporal', function ($request) {
-    // Procesar imagen subida
+
     if (!isset($_FILES['file'])) {
         echo json_encode(["error" => "No se ha enviado ningún archivo"]);
         return;
@@ -127,43 +121,38 @@ $app->post('/subir_imagen_temporal', function ($request) {
 
     $archivo = $_FILES['file'];
 
-    // Verificar errores
     if ($archivo['error'] !== UPLOAD_ERR_OK) {
         $respuesta["error"] = "Error al subir el archivo";
         echo json_encode($respuesta);
         return;
     }
 
-    // Verificar tipo archivo
     $tiposPermitidos = ['image/jpeg', 'image/png', 'image/gif'];
     if (!in_array($archivo['type'], $tiposPermitidos)) {
         echo json_encode(["error" => "El archivo debe ser una imagen (JPEG, PNG o GIF)"]);
         return;
     }
 
-    // Generar nombre único foto temporal
+    // nombre único foto temporal
     $extension = pathinfo($archivo['name'], PATHINFO_EXTENSION);
     $nombreArchivo = uniqid() . '.' . $extension;
 
-    // Guardar en carpeta temporal
     $rutaDestino = 'images/temporales/' . $nombreArchivo;
 
-    // Crear directorio si no existe
+    // crear carpeta si no existe
     if (!file_exists('images/temporales/')) {
         mkdir('images/temporales/', 0777, true);
     }
 
-    // Mover el archivo
+    // mover el archivo
     if (!move_uploaded_file($archivo['tmp_name'], $rutaDestino)) {
         echo json_encode(["error" => "No se pudo guardar el archivo"]);
         return;
     }
 
-    // Construir la URL absoluta correcta para la imagen
     $urlBase = "https://tulipart-production.up.railway.app/images/temporales/";
     $urlTemporal = $urlBase . $nombreArchivo;
 
-    // Devolver información foto temporal
     $respuesta = [
         "mensaje" => "Imagen subida temporalmente",
         "nombreTemporal" => $nombreArchivo,
@@ -174,10 +163,9 @@ $app->post('/subir_imagen_temporal', function ($request) {
     echo json_encode($respuesta);
 });
 
-// Limpiar imágenes temporales
 $app->post('/limpiar_imagenes_temporales', function ($request) {
     $test = validateToken();
-    //echo json_encode($test);
+
     if (is_array($test)) {
         if (isset($test["usuario"])) {
             $imagenesJson = $request->getParam('imagenes');
@@ -231,10 +219,9 @@ $app->get('/likes_obra/{idObra}', function ($request) {
     echo json_encode(obtener_likes_obra($idObra));
 });
 
-//dar like obra
 $app->post('/dar_like_obra', function ($request) {
     $test = validateToken();
-    //echo json_encode($test);
+
     if (is_array($test)) {
         if (isset($test["usuario"])) {
             $idUsu = $request->getParam("idUsu");
@@ -246,10 +233,9 @@ $app->post('/dar_like_obra', function ($request) {
         echo json_encode(array("no_auth" => "No tienes permiso para usar el servicio"));
 });
 
-//quitar like obra
 $app->delete('/quitar_like_obra/{idUsu}/{idObra}', function ($request) {
     $test = validateToken();
-    //echo json_encode($test);
+
     if (is_array($test)) {
         if (isset($test["usuario"])) {
             $idUsu = $request->getAttribute("idUsu");
@@ -261,16 +247,14 @@ $app->delete('/quitar_like_obra/{idUsu}/{idObra}', function ($request) {
         echo json_encode(array("no_auth" => "No tienes permiso para usar el servicio"));
 });
 
-//obtener seguidores usuario
 $app->get('/seguidores_usuario/{idUsu}', function ($request) {
     $idUsu = $request->getAttribute("idUsu");
     echo json_encode(obtener_seguidores_usuario($idUsu));
 });
 
-// dar follow usuario
 $app->post('/seguir_usuario', function ($request) {
     $test = validateToken();
-    //echo json_encode($test);
+
     if (is_array($test)) {
         if (isset($test["usuario"])) {
             $idUsuSeguidor = $request->getParam("idUsuSeguidor");
@@ -282,10 +266,9 @@ $app->post('/seguir_usuario', function ($request) {
         echo json_encode(array("no_auth" => "No tienes permiso para usar el servicio"));
 });
 
-// dejar de seguir usuario
 $app->delete('/dejar_seguir_usuario/{idUsuSeguidor}/{idUsuSeguido}', function ($request) {
     $test = validateToken();
-    //echo json_encode($test);
+
     if (is_array($test)) {
         if (isset($test["usuario"])) {
             $idUsuSeguidor = $request->getAttribute("idUsuSeguidor");
@@ -297,31 +280,26 @@ $app->delete('/dejar_seguir_usuario/{idUsuSeguidor}/{idUsuSeguido}', function ($
         echo json_encode(array("no_auth" => "No tienes permiso para usar el servicio"));
 });
 
-//obtener los comentarios de una obra
 $app->get('/comentarios_obra/{idObra}', function ($request) {
     $idObra = $request->getAttribute("idObra");
     echo json_encode(obtener_comentarios_obra($idObra));
 });
 
-// obtener todas las etiquetas
 $app->get('/etiquetas', function () {
     echo json_encode(obtener_etiquetas());
 });
 
-// obtener etiquetas de una obra
 $app->get('/etiquetas_obra/{idObra}', function ($request) {
     $idObra = $request->getAttribute('idObra');
     echo json_encode(obtener_etiquetas_obra($idObra));
 });
 
-// obtener obras relacionadas por etiquetas
 $app->get('/obras_por_etiquetas', function ($request) {
     $etiquetas = $request->getQueryParam('etiquetas');
     $excluir = $request->getQueryParam('excluir');
     echo json_encode(obtener_obras_por_etiquetas($etiquetas, $excluir));
 });
 
-// crear etiqueta
 $app->post('/crear_etiqueta', function ($request) {
     $test = validateToken();
     //echo json_encode($test);
@@ -339,7 +317,7 @@ $app->post('/crear_etiqueta', function ($request) {
 // crear relacion etiqueta obra
 $app->post('/crear_etiqueta_obra', function ($request) {
     $test = validateToken();
-    //echo json_encode($test);
+
     if (is_array($test)) {
         if (isset($test["usuario"])) {
             $datos = array();
@@ -357,13 +335,11 @@ $app->get('/buscar_etiqueta/{nombre}', function ($request) {
     echo json_encode(buscar_etiqueta($nombre));
 });
 
-// Obtener comentarios
 $app->get('/comentarios_obra_user/{idObra}', function ($request) {
     $idObra = $request->getAttribute('idObra');
     echo json_encode(obtener_comentarios_obra_user($idObra));
 });
 
-// Crear comentario
 $app->post('/crear_comentario_obra', function ($request) {
     $test = validateToken();
     //echo json_encode($test);
@@ -380,7 +356,6 @@ $app->post('/crear_comentario_obra', function ($request) {
         echo json_encode(array("no_auth" => "No tienes permiso para usar el servicio"));
 });
 
-// Eliminar comentario
 $app->delete('/eliminar_comentario_obra/{idComentario}', function ($request) {
     $test = validateToken();
     //echo json_encode($test);
@@ -394,10 +369,9 @@ $app->delete('/eliminar_comentario_obra/{idComentario}', function ($request) {
         echo json_encode(array("no_auth" => "No tienes permiso para usar el servicio"));
 });
 
-// Editar comentario
 $app->put('/editar_comentario_obra/{idComentario}', function ($request) {
     $test = validateToken();
-    //echo json_encode($test);
+
     if (is_array($test)) {
         if (isset($test["usuario"])) {
             $idComentario = $request->getAttribute('idComentario');
@@ -413,10 +387,10 @@ $app->put('/editar_comentario_obra/{idComentario}', function ($request) {
         echo json_encode(array("no_auth" => "No tienes permiso para usar el servicio"));
 });
 
-// Borrar obra, fotos y ralación etiquetasobras
+// borrar obra, fotos y ralación etiquetasobras
 $app->delete('/borrar_obra/{idObra}', function ($request) {
     $test = validateToken();
-    //echo json_encode($test);
+
     if (is_array($test)) {
         if (isset($test["usuario"])) {
             $idObra = $request->getAttribute('idObra');
@@ -427,39 +401,36 @@ $app->delete('/borrar_obra/{idObra}', function ($request) {
         echo json_encode(array("no_auth" => "No tienes permiso para usar el servicio"));
 });
 
-// Obtener alerts seguidores
 $app->get('/alertas_seguidores/{idUsu}', function ($request) {
     $idUsu = $request->getAttribute("idUsu");
     echo json_encode(obtener_alertas_seguidores($idUsu));
 });
 
-// Obetener alertas de likes de un usuario
 $app->get('/alertas_likes/{idUsu}', function ($request) {
     $idUsu = $request->getAttribute("idUsu");
     echo json_encode(obtener_alertas_likes($idUsu));
 });
 
-// Obetener alerts comentarios
 $app->get('/alertas_comentarios/{idUsu}', function ($request) {
     $idUsu = $request->getAttribute("idUsu");
     echo json_encode(obtener_alertas_comentarios($idUsu));
 });
 
-// Editar alerta follow vista
+// editar alerta follow vista
 $app->put('/alerta_follow_visto/{idSeguido}/{idSeguidor}', function ($request) {
     $idSeguido = $request->getAttribute("idSeguido");
     $idSeguidor = $request->getAttribute("idSeguidor");
     echo json_encode(marcar_alerta_follow_visto($idSeguido, $idSeguidor));
 });
 
-// Editar alerta like vista
+// editar alerta like vista
 $app->put('/alerta_like_visto/{idObra}/{idUsuLike}', function ($request) {
     $idObra = $request->getAttribute("idObra");
     $idUsuLike = $request->getAttribute("idUsuLike");
     echo json_encode(marcar_alerta_like_visto($idObra, $idUsuLike));
 });
 
-// Editar alerta comentario vista
+// editar alerta comentario vista
 $app->put('/alerta_comentario_visto/{idComentario}', function ($request) {
     $idComentario = $request->getAttribute("idComentario");
     echo json_encode(marcar_alerta_comentario_visto($idComentario));

@@ -1,5 +1,5 @@
 <?php
-// Función para obtener las etiquetas de una obra
+
 function obtener_etiquetas_obra($idObra)
 {
     try {
@@ -10,7 +10,6 @@ function obtener_etiquetas_obra($idObra)
     }
 
     try {
-        // Consulta SQL para obtener las etiquetas asociadas a una obra
         $consulta = "SELECT e.* FROM etiquetas e
                     INNER JOIN etiquetasobras eo ON e.idEtiqueta = eo.idEtiqueta
                     WHERE eo.idObra = ?
@@ -30,7 +29,7 @@ function obtener_etiquetas_obra($idObra)
     return $respuesta;
 }
 
-// Función para buscar obras que comparten etiquetas con otra obra
+// buscar obras que comparten etiquetas con otra obra
 function obtener_obras_por_etiquetas($etiquetas, $idObraExcluir = null)
 {
     try {
@@ -41,34 +40,29 @@ function obtener_obras_por_etiquetas($etiquetas, $idObraExcluir = null)
     }
 
     try {
-        // Convertir la lista de IDs de etiquetas a un array
         if (!is_array($etiquetas)) {
             $etiquetas = explode(',', $etiquetas);
         }
 
-        // Verificar que hay etiquetas para buscar
         if (empty($etiquetas)) {
             $respuesta["obras"] = [];
             return $respuesta;
         }
 
         $placeholders = implode(',', array_fill(0, count($etiquetas), '?'));
-        
-        // Consulta SQL para encontrar obras que comparten al menos una de estas etiquetas
+
         $consulta = "SELECT DISTINCT o.* FROM obras o
                     INNER JOIN etiquetasobras eo ON o.idObra = eo.idObra
                     WHERE eo.idEtiqueta IN ($placeholders)";
-        
-        // Parámetros para la consulta
+
         $params = $etiquetas;
         
-        // Excluir la obra actual si se especifica
+        // excluir obra actual
         if ($idObraExcluir !== null) {
             $consulta .= " AND o.idObra != ?";
             $params[] = $idObraExcluir;
         }
-        
-        // Ordenar por fecha de publicación descendente (más recientes primero)
+
         $consulta .= " ORDER BY o.fecPubli DESC LIMIT 10";
         
         $sentencia = $conexion->prepare($consulta);

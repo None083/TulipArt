@@ -21,7 +21,7 @@ function validateToken()
 
     $headers = apache_request_headers();
     if (!isset($headers["Authorization"]))
-        return false; //Sin autorizacion
+        return false;
     else {
         $authorization = $headers["Authorization"];
         $authorizationArray = explode(" ", $authorization);
@@ -29,7 +29,7 @@ function validateToken()
         try {
             $info = JWT::decode($token, new Key(PASSWORD_API, 'HS256'));
         } catch (\Throwable $th) {
-            return false; //Expirado
+            return false;
         }
 
         try {
@@ -232,7 +232,6 @@ function obtener_obras_usuario($idUsu)
     return $respuesta;
 }
 
-// Obtener los likes de una obra
 function obtener_likes_obra($idObra)
 {
     try {
@@ -259,7 +258,6 @@ function obtener_likes_obra($idObra)
     return $respuesta;
 }
 
-// Dar like a una obra
 function dar_like_obra($idUsu, $idObra)
 {
     try {
@@ -286,7 +284,6 @@ function dar_like_obra($idUsu, $idObra)
     return $respuesta;
 }
 
-// Quitar like a una obra
 function quitar_like_obra($idUsu, $idObra)
 {
     try {
@@ -313,7 +310,6 @@ function quitar_like_obra($idUsu, $idObra)
     return $respuesta;
 }
 
-// Obtener los comentarios de una obra
 function obtener_comentarios_obra($idObra)
 {
     try {
@@ -340,7 +336,6 @@ function obtener_comentarios_obra($idObra)
     return $respuesta;
 }
 
-// Obtener los seguidores de un usuario
 function obtener_seguidores_usuario($idUsu)
 {
     try {
@@ -367,7 +362,6 @@ function obtener_seguidores_usuario($idUsu)
     return $respuesta;
 }
 
-// Seguir a un usuario
 function seguir_usuario($idUsuSeguidor, $idUsuSeguido)
 {
     try {
@@ -394,7 +388,6 @@ function seguir_usuario($idUsuSeguidor, $idUsuSeguido)
     return $respuesta;
 }
 
-// Dejar de seguir a un usuario
 function dejar_seguir_usuario($idUsuSeguidor, $idUsuSeguido)
 {
     try {
@@ -421,7 +414,6 @@ function dejar_seguir_usuario($idUsuSeguidor, $idUsuSeguido)
     return $respuesta;
 }
 
-// obtener obra por id
 function obtener_obra($idObra)
 {
     try {
@@ -453,7 +445,6 @@ function obtener_obra($idObra)
     return $respuesta;
 }
 
-// Obtener todas las etiquetas
 function obtener_etiquetas()
 {
     try {
@@ -480,7 +471,6 @@ function obtener_etiquetas()
     return $respuesta;
 }
 
-// Crear una nueva etiqueta
 function crear_etiqueta($datos)
 {
     try {
@@ -509,7 +499,7 @@ function crear_etiqueta($datos)
     return $respuesta;
 }
 
-// crear relacion etiqueta obra
+// relacion etiqueta con obra
 function crear_etiqueta_obra($datos)
 {
     try {
@@ -536,7 +526,6 @@ function crear_etiqueta_obra($datos)
     return $respuesta;
 }
 
-// Buscar una etiqueta por nombre
 function buscar_etiqueta($nombre)
 {
     try {
@@ -563,7 +552,6 @@ function buscar_etiqueta($nombre)
     return $respuesta;
 }
 
-// Función para obtener una imagen por su ID
 function obtener_imagen_por_id($idFoto) {
     try {
         $conexion = new PDO("mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD, USUARIO_BD, CLAVE_BD, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
@@ -590,7 +578,6 @@ function obtener_imagen_por_id($idFoto) {
         exit;
     }
 
-    // La ruta ahora utiliza el nuevo formato de nombres en la carpeta correcta
     $rutaArchivo = 'images/obras/' . $resultado['foto'];
     
     if (!file_exists($rutaArchivo)) {
@@ -619,7 +606,6 @@ function obtener_imagen_por_id($idFoto) {
     exit;
 }
 
-// Añadir a funciones_CTES_servicios.php
 function crear_obra_con_imagenes($idUsu, $title, $description, $downloadable, $matureContent, $aiGenerated, $imagenes_temporal) {
     try {
         $conexion = new PDO("mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD, USUARIO_BD, CLAVE_BD, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
@@ -628,75 +614,72 @@ function crear_obra_con_imagenes($idUsu, $title, $description, $downloadable, $m
         return $respuesta;
     }
 
-    // Iniciar transacción para asegurar que todo se ejecuta o nada
+    // iniciar transacción
     $conexion->beginTransaction();
 
     try {
-        // 1. Crear la obra
+        // crear obra
         $consulta = "INSERT INTO obras (idUsu, nombreObra, descObra, fecPubli, downloadable, matureContent, aiGenerated) VALUES (?, ?, ?, NOW(), ?, ?, ?)";
         $sentencia = $conexion->prepare($consulta);
         $sentencia->execute([$idUsu, $title, $description, $downloadable, $matureContent, $aiGenerated]);
         $idObra = $conexion->lastInsertId();
         
-        // Crear un nombre seguro para la URL a partir del título (sin espacios ni caracteres especiales)
+        // nombre obra seguro
         $nombreSeguro = strtolower(preg_replace('/[^a-zA-Z0-9]/', '_', $title));
-        $nombreSeguro = preg_replace('/_+/', '_', $nombreSeguro); // Eliminar múltiples barras bajas consecutivas
-        $nombreSeguro = trim($nombreSeguro, '_'); // Eliminar barras bajas del inicio y final
+        $nombreSeguro = preg_replace('/_+/', '_', $nombreSeguro);
+        $nombreSeguro = trim($nombreSeguro, '_');
         
         if (empty($nombreSeguro)) {
-            $nombreSeguro = "obra"; // Si después de limpiar queda vacío, usar un nombre predeterminado
+            $nombreSeguro = "obra"; // si después de limpiar queda vacío
         }
         
-        // 2. Procesar las imágenes temporales
-        $contador = 0; // Contador para numerar las imágenes
+        // procesar imágenes temporales
+        $contador = 0;
         foreach ($imagenes_temporal as $imagen) {
             $nombreTemporal = $imagen['nombreTemporal'];
             $nombreOriginal = $imagen['nombreOriginal'];
             
-            // Verificar que el archivo existe
+            // verificar que el archivo existe
             $rutaTemporal = 'images/temporales/' . $nombreTemporal;
             if (!file_exists($rutaTemporal)) {
-                // Si una imagen no existe, hacer rollback
+                // si una imagen no existe hacer rollback
                 $conexion->rollBack();
                 $respuesta["error"] = "Una de las imágenes temporales no existe: " . $nombreTemporal;
                 return $respuesta;
             }
             
-            // Obtener la extensión del archivo
             $extension = pathinfo($nombreTemporal, PATHINFO_EXTENSION);
             
-            // Crear el nuevo nombre según el patrón: nombreObra_idObra_numeroSecuencial.extension
+            // crear nuevo nombre imagen: nombreObra_idObra_numero(de imagen en un mismo post).extension
             $nuevoNombre = $nombreSeguro . '_' . $idObra . '_' . $contador . '.' . $extension;
-            
-            // Ruta destino para la imagen final
+
             $rutaDestino = 'images/obras/' . $nuevoNombre;
             
-            // Crear directorio si no existe
+            // crear carpeta si no existe
             if (!file_exists('images/obras/')) {
                 mkdir('images/obras/', 0777, true);
             }
             
-            // Copiar el archivo (no mover aún para evitar problemas si hay error)
+            // copiar el archivo (no mover aún por evitar problemas si hay error)
             if (!copy($rutaTemporal, $rutaDestino)) {
-                // Si falla la copia, hacer rollback
                 $conexion->rollBack();
                 $respuesta["error"] = "No se pudo copiar la imagen: " . $nombreTemporal;
                 return $respuesta;
             }
             
-            // Insertar en la base de datos con el nuevo nombre
+            // insertar en la bd
             $consulta = "INSERT INTO fotos (idObra, foto) VALUES (?, ?)";
             $sentencia = $conexion->prepare($consulta);
             $sentencia->execute([$idObra, $nuevoNombre]);
             
-            // Incrementar el contador para la siguiente imagen
+            // +1 al contador para la siguiente imagen
             $contador++;
         }
         
-        // Si todo ha ido bien, confirmar la transacción y eliminar los archivos temporales
+        // si todo ha ido bien confirmar transacción
         $conexion->commit();
         
-        // Ahora que la transacción está confirmada, eliminar los archivos temporales
+        // eliminar archivos temporales
         foreach ($imagenes_temporal as $imagen) {
             $rutaTemporal = 'images/temporales/' . $imagen['nombreTemporal'];
             if (file_exists($rutaTemporal)) {
@@ -707,7 +690,6 @@ function crear_obra_con_imagenes($idUsu, $title, $description, $downloadable, $m
         $respuesta["mensaje"] = "Obra creada correctamente";
         $respuesta["idObra"] = $idObra;
     } catch (PDOException $e) {
-        // Si hay cualquier error, deshacer los cambios
         $conexion->rollBack();
         $sentencia = null;
         $conexion = null;
@@ -720,7 +702,6 @@ function crear_obra_con_imagenes($idUsu, $title, $description, $downloadable, $m
     return $respuesta;
 }
 
-// Función para obtener los comentarios de una obra con información del usuario a partir de idObra
 function obtener_comentarios_obra_user($idObra) {
     try {
         $conexion = new PDO("mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD, USUARIO_BD, CLAVE_BD, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
@@ -750,7 +731,6 @@ function obtener_comentarios_obra_user($idObra) {
     return $respuesta;
 }
 
-// Función para crear un comentario en una obra
 function crear_comentario_obra($idUsu, $idObra, $comentario)
 {
     try {
@@ -777,7 +757,6 @@ function crear_comentario_obra($idUsu, $idObra, $comentario)
     return $respuesta;
 }
 
-// Función para eliminar un comentario de una obra
 function eliminar_comentario_obra($idComentario) {
     try {
         $conexion = new PDO("mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD, USUARIO_BD, CLAVE_BD, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
@@ -803,7 +782,6 @@ function eliminar_comentario_obra($idComentario) {
     return $respuesta;
 }
 
-// Función para editar un comentario de una obra
 function editar_comentario_obra($idComentario, $nuevoComentario) {
     try {
         $conexion = new PDO("mysql:host=" . SERVIDOR_BD . ";dbname=" . NOMBRE_BD, USUARIO_BD, CLAVE_BD, array(PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES 'utf8'"));
@@ -829,7 +807,7 @@ function editar_comentario_obra($idComentario, $nuevoComentario) {
     return $respuesta;
 }
 
-// Borrar una obra, fotos asociadas y ralación etiquetasobras
+// borrar obra, fotos asociadas y relación etiquetasobras
 function borrar_obra($idObra) {
     $respuesta = array();
 
@@ -841,17 +819,14 @@ function borrar_obra($idObra) {
     }
 
     try {
-        // Borrar las fotos asociadas
         $consulta = "DELETE FROM fotos WHERE idObra = ?";
         $sentencia = $conexion->prepare($consulta);
         $sentencia->execute([$idObra]);
 
-        // Borrar la relación en etiquetasobras
         $consulta = "DELETE FROM etiquetasobras WHERE idObra = ?";
         $sentencia = $conexion->prepare($consulta);
         $sentencia->execute([$idObra]);
 
-        // Borrar la obra
         $consulta = "DELETE FROM obras WHERE idObra = ?";
         $sentencia = $conexion->prepare($consulta);
         $sentencia->execute([$idObra]);
@@ -869,8 +844,6 @@ function borrar_obra($idObra) {
     return $respuesta;
 }
 
-// Obtener las alertas de un usuario (comentan, likes y siguen visto = 0)
-// Siguen
 function obtener_alertas_seguidores($idUsu) {
     $respuesta = array();
 
@@ -898,7 +871,6 @@ function obtener_alertas_seguidores($idUsu) {
     return $respuesta;
 }
 
-// Likes
 function obtener_alertas_likes($idUsu) {
     $respuesta = array();
 
@@ -931,7 +903,6 @@ function obtener_alertas_likes($idUsu) {
     return $respuesta;
 }
 
-// Comentarios
 function obtener_alertas_comentarios($idUsu) {
     $respuesta = array();
 
@@ -964,8 +935,6 @@ function obtener_alertas_comentarios($idUsu) {
     return $respuesta;
 }
 
-// Marcar alertas como vistas
-//Follow
 function marcar_alerta_follow_visto($idSeguido, $idSeguidor) {
     $respuesta = array();
 
@@ -993,7 +962,6 @@ function marcar_alerta_follow_visto($idSeguido, $idSeguidor) {
     return $respuesta;
 }
 
-//Like
 function marcar_alerta_like_visto($idObra, $idUsu) {
     $respuesta = array();
 
@@ -1021,7 +989,6 @@ function marcar_alerta_like_visto($idObra, $idUsu) {
     return $respuesta;
 }
 
-//Comentario
 function marcar_alerta_comentario_visto($idComentario) {
     $respuesta = array();
 

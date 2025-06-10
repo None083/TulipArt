@@ -1,35 +1,31 @@
 <?php
-// Función auxiliar para contar el total de registros para paginación
+// contar total de obras para paginación
 function contar_total_obras($conexion, $filtro = "", $valor = "") {
-    // Construir la consulta SQL base
+
     $sql = "SELECT COUNT(DISTINCT o.idObra) FROM obras o";
     $parametros = [];
-    
-    // Aplicar JOINs según el filtro (separamos los JOINs de las condiciones WHERE para mayor claridad)
+
+    // joins según el filtro
     if ($filtro && $valor) {
         switch ($filtro) {
             case "buscar":
-                // Búsqueda por título o por etiquetas
                 $sql .= " LEFT JOIN etiquetasobras eo ON o.idObra = eo.idObra 
                            LEFT JOIN etiquetas e ON eo.idEtiqueta = e.idEtiqueta";
                 break;
             case "etiqueta":
-                // Filtrar por etiqueta específica
                 $sql .= " INNER JOIN etiquetasobras eo ON o.idObra = eo.idObra 
                            INNER JOIN etiquetas e ON eo.idEtiqueta = e.idEtiqueta";
                 break;
             case "siguiendo":
-                // Obras de usuarios que sigue el usuario logueado
                 $sql .= " INNER JOIN siguen s ON o.idUsu = s.idSeguido";
                 break;
             case "for_you":
-                // Obras con etiquetas similares a las obras que ha dado like el usuario
                 $sql .= " INNER JOIN etiquetasobras eo ON o.idObra = eo.idObra";
                 break;
         }
     }
     
-    // Aplicar condiciones WHERE
+    // condiciones where según el filtro
     if ($filtro && $valor) {
         switch ($filtro) {
             case "buscar":
@@ -74,7 +70,6 @@ function contar_total_obras($conexion, $filtro = "", $valor = "") {
     }
 }
 
-// Reemplaza la función obtener_obras() existente
 function obtener_obras_filtradas($filtro = "", $valor = "", $ordenar = "", $pagina = 1, $limite = 20)
 {
     try {
@@ -84,11 +79,11 @@ function obtener_obras_filtradas($filtro = "", $valor = "", $ordenar = "", $pagi
         return $respuesta;
     }
     
-    // Cálculo del offset para paginación
+    // cálculo offset para paginación
     $offset = ($pagina - 1) * $limite;
     
-    // Construir la consulta SQL base
-    // Para trending, incluimos num_likes en el SELECT para poder ordenar por este campo
+    // consulta sql base
+    // para trending incluye num_likes para poder ordenar por ese campo
     if ($ordenar === "trending") {
         $sql = "SELECT DISTINCT o.*, COALESCE(l.num_likes, 0) as num_likes FROM obras o";
     } else {
@@ -96,7 +91,7 @@ function obtener_obras_filtradas($filtro = "", $valor = "", $ordenar = "", $pagi
     }
     $parametros = [];
     
-    // Aplicar JOINs según el filtro
+    // joins según el filtro
     if ($filtro && $valor) {
         switch ($filtro) {
             case "buscar":
@@ -115,14 +110,13 @@ function obtener_obras_filtradas($filtro = "", $valor = "", $ordenar = "", $pagi
                 break;
         }
     }
-    
-    // Agregar el JOIN para trending antes del WHERE
+
     if ($ordenar === "trending") {
         $sql .= " LEFT JOIN (SELECT idObra, COUNT(*) as num_likes 
                   FROM likes GROUP BY idObra) l ON o.idObra = l.idObra";
     }
     
-    // Aplicar WHERE según el filtro
+    // where según el filtro
     if ($filtro && $valor) {
         switch ($filtro) {
             case "buscar":
@@ -158,7 +152,7 @@ function obtener_obras_filtradas($filtro = "", $valor = "", $ordenar = "", $pagi
         }
     }
     
-    // Aplicar ordenación
+    // ordenación
     if ($ordenar) {
         switch ($ordenar) {
             case "recientes":
@@ -168,15 +162,15 @@ function obtener_obras_filtradas($filtro = "", $valor = "", $ordenar = "", $pagi
                 $sql .= " ORDER BY num_likes DESC, o.fecPubli DESC";
                 break;
             default:
-                $sql .= " ORDER BY o.fecPubli DESC"; // Por defecto, ordenar por fecha descendente
+                $sql .= " ORDER BY o.fecPubli DESC";
         }
     } else {
-        $sql .= " ORDER BY o.fecPubli DESC"; // Por defecto, ordenar por fecha descendente
+        $sql .= " ORDER BY o.fecPubli DESC";
     }
     
-    // Aplicar límite para paginación - usar valores directamente en el SQL en lugar de parámetros
-    $limite = (int)$limite;  // Convertir explícitamente a entero
-    $offset = (int)$offset;  // Convertir explícitamente a entero
+    // límite paginación
+    $limite = (int)$limite;
+    $offset = (int)$offset;
     $sql .= " LIMIT $limite OFFSET $offset";
     
     try {
@@ -198,7 +192,6 @@ function obtener_obras_filtradas($filtro = "", $valor = "", $ordenar = "", $pagi
     return $respuesta;
 }
 
-// Actualización de obtener_obras_usuario para soportar ordenamiento
 function obtener_obras_usuario_filtradas($idUsu, $ordenar = "")
 {
     try {
@@ -220,8 +213,7 @@ function obtener_obras_usuario_filtradas($idUsu, $ordenar = "")
     }
     
     $parametros = [$idUsu];
-    
-    // Aplicar ordenación
+
     if ($ordenar) {
         switch ($ordenar) {
             case "recientes":
@@ -231,10 +223,10 @@ function obtener_obras_usuario_filtradas($idUsu, $ordenar = "")
                 $sql .= " ORDER BY num_likes DESC, fecPubli DESC";
                 break;
             default:
-                $sql .= " ORDER BY fecPubli DESC"; // Por defecto, ordenar por fecha descendente
+                $sql .= " ORDER BY fecPubli DESC";
         }
     } else {
-        $sql .= " ORDER BY fecPubli DESC"; // Por defecto, ordenar por fecha descendente
+        $sql .= " ORDER BY fecPubli DESC";
     }
 
     try {
